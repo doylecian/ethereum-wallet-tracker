@@ -1,7 +1,7 @@
 import requests
 
 api_url = 'https://api.etherscan.io/api'
-api_key = 'EJIVWE393IX9JJHG3FJAHWMCGY4X3P4RST'
+api_key = ''
 startblock = '0'
 endblock = '999999999'
 
