@@ -55,7 +55,7 @@ def get_transaction_receipt(txhash):
 
 
 def last_hash_value(hash): # TODO implement this function
-    print('test')
+    print('tes')
 
 
 def hex_to_decimal(hex):
