@@ -3,7 +3,7 @@ import math
 from textwrap import wrap
 
 api_url = 'https://api.etherscan.io/api'
-api_key = ''
+api_key = 'EJIVWE393IX9JJHG3FJAHWMCGY4X3P4RST'
 startblock = '0'
 endblock = '999999999'
 
@@ -20,14 +20,21 @@ eth_function_hashes = {
     '0x1c411e9a96e071241c2f21f7726b17ae89e3cab4c78be50e062b03a9fffbbad1': 'Sync',
     '0x7ff36ab5': 'swapExactETHForTokens',
     '0x18cbafe5': 'swapExactTokensForETH',
-    '0x38ed1739': 'swapExactTokensForTokens'
+    '0x38ed1739': 'swapExactTokensForTokens',
+    '0x414bf389': 'exactInputSingle', # todo 0x60c22434deab8cbc3fddcbc1cc85a7f5a21a854f7856454428eeb159ccf9e4a2
+    '0x3805550f': 'exit', # todo 0xcfd8a65b4355b05c36c0d72a04640f16c0f456a630b882a41a78219357999d81
+    '0xa9059cbb': 'transfer(address _to, uint256 _value)' # todo 0x3951c492fd124ca0635b277848200460fcd4effd8a42392e958ca0013a0ed7fb
 }
 
 token_contract_decimals = {
-    'SYN': 18
+    'SYN': 18,
+    'DEFAULT': 18
 }
 
-def list_token_txns(wallet_address, token_symbol, ascending=False, query_limit=0):
+def list_token_txns(wallet_address, token_symbol=0, ascending=False, query_limit=0):
+
+    if not token_symbol:
+        token_symbol = "DEFAULT"
 
     if (ascending):
         order = 'asc'
@@ -46,14 +53,15 @@ def list_token_txns(wallet_address, token_symbol, ascending=False, query_limit=0
 
     query_count = 0
 
-    print("Incoming token transactions for " + wallet_address + "\n")
+    print("\nIncoming token transactions for " + wallet_address + "\n")
     token_balance = 0
     eth_balance = 0
     for txn in txns['result']:
         if query_count < query_limit or query_limit == 0:
-            if txn['tokenSymbol'] == token_symbol: # If it's a transaction we care about
+            if txn['tokenSymbol'] == token_symbol or token_symbol == 'DEFAULT': # If it's a transaction we care about
 
                 transaction_hash = txn['hash']
+                print(transaction_hash)
                 transaction_info = get_transaction_info(transaction_hash)
                 transaction_input = transaction_info['input']
                 input_method = transaction_input[0:10] # Extract first 10 bytes for method hash
@@ -93,7 +101,7 @@ def list_token_txns(wallet_address, token_symbol, ascending=False, query_limit=0
 
                 query_count += 1
 
-            print("Net outcome -> " + token_symbol + ": " + str(token_balance) + " | " + str(eth_balance) + " ETH")
+            #print("Net outcome -> " + token_symbol + ": " + str(token_balance) + " | " + str(eth_balance) + " ETH")
 
 def list_transaction_events(txhash):
     tx_receipt = get_transaction_receipt(txhash)
@@ -151,7 +159,8 @@ def hex_to_value(hex, token_symbol): # Converts hex value to reflect amount of t
 def wei_to_eth(wei): # Converts values in wei to eth equivalent
     return str(int(wei) / (10**18))
 
-list_token_txns('0x0da634aaae01eb2cc3a90dac6734c45bb9180e9e', 'SYN', query_limit=4, ascending=True)
+list_token_txns('0x1beb5cc62a71683bE44681814a8a6fedC9e484B8', query_limit=4, ascending=True)
+#list_token_txns('0x0da634aaae01eb2cc3a90dac6734c45bb9180e9e', 'SYN', query_limit=4, ascending=True)
 #list_token_txns('0xf76219cecc4329707d2188934f3fec3edb306e2c', 'SYN', query_limit=3)
 #list_transaction_events("0x1c5df1fd206c6d2d17ee353babf3bdd8ad1c6473505fe893421074bb04a9391c")
 #TODO 0xfc87736145f79e4dc2c69bdcd335ae3fb471d5cec9c1fa312f2621ff76e17b30 - get exact amnt received from swap function with to argument as wallet_address
