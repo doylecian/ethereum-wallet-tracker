@@ -1,1 +1,5 @@
 cfg.json
+gui.py
+signum-chat.py
+stylesheet.qss
+__pycache__

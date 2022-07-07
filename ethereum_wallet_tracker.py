@@ -1,7 +1,9 @@
 import requests
 import json
+from eth_classes import Wallet, Transaction
 from textwrap import wrap
 from eth_contracts import eth_function_hashes, token_contract_decimals
+from tabulate import tabulate
 
 with open('cfg.json') as config:
     cfg = json.load(config)
@@ -35,59 +37,20 @@ def list_token_txns(wallet_address, token_symbol=0, ascending=False, query_limit
     })
 
     r = requests.get(url = api_url, params = api_params)
-    txns = r.json()
+    api_res = r.json()
 
     query_count = 0
 
     print("\nIncoming token transactions for " + wallet_address + "\n")
-    token_balance = 0
-    eth_balance = 0
-    for txn in txns['result']:
+    
+    wallet = Wallet(wallet_address)
+    for transaction_dict in api_res['result']:
         if query_count < query_limit or query_limit == 0:
-            if txn['tokenSymbol'] == token_symbol or token_symbol == 'DEFAULT': # If it's a transaction we care about
-
-                transaction_hash = txn['hash']
-                print(transaction_hash)
-                transaction_info = get_transaction_info(transaction_hash)
-                transaction_input = transaction_info['input']
-                input_method = transaction_input[0:10] # Extract first 10 bytes for method hash
-                stripped_input = transaction_input[10:] # Remove method hash
-                input_method_params = split_hash(stripped_input) # Get passed parameters
-                transaction_outgoing = 0
-
-                if eth_function_hashes[input_method] == 'swapExactTokensForETH': # selling tokens for eth
-                    value_wei = hex_to_decimal(strip_zeros(input_method_params[1]))
-                    address_to = input_method_params[3]
-                    amount = hex_to_value(hex_to_decimal(input_method_params[0]), token_symbol)
-                    transaction_outgoing = 1
-                elif eth_function_hashes[input_method] == 'swapExactETHForTokens': # buying tokens for eth
-                    value_wei = hex_to_decimal(strip_zeros(transaction_info['value']))
-                    address_to = input_method_params[2]
-                    amount = hex_to_value(hex_to_decimal(input_method_params[0]), token_symbol)
-                elif eth_function_hashes[input_method] == 'swapExactTokensForTokens': # bUYING TOKEN -- TODO: GET RECEIPT HERE
-                    address_to = input_method_params[3]
-                    if transaction_info['value'] == '0x0': # Buying our tokens with other tokens (USDC, WETH, ETC)
-                        value_wei = hex_to_decimal(strip_zeros(input_method_params[0]))
-                        amount = hex_to_value(hex_to_decimal(input_method_params[1]), token_symbol)
-                    else: # Selling our tokens for other tokens
-                        value_wei = hex_to_decimal(strip_zeros(input_method_params[1]))
-                        amount = hex_to_value(hex_to_decimal(input_method_params[0]), token_symbol)
-                        transaction_outgoing = 1
-
-                value_eth = wei_to_eth(value_wei)
-                char_limit = 12
-                if transaction_outgoing:
-                    print("[" + eth_function_hashes[input_method] +  "] " + amount[:char_limit] + " " + token_symbol + " -> " + value_eth[:char_limit] + " ETH")
-                    eth_balance += float(value_eth)
-                    token_balance -= float(amount)
-                else:
-                    print("[" + eth_function_hashes[input_method] +  "] " + value_eth[:char_limit] + " " + "ETH -> " + amount[:char_limit] + " " + token_symbol)
-                    eth_balance -= float(value_eth)
-                    token_balance += float(amount)
-
-                query_count += 1
-
-            #print("Net outcome -> " + token_symbol + ": " + str(token_balance) + " | " + str(eth_balance) + " ETH")
+            if transaction_dict['tokenSymbol'] == token_symbol or token_symbol == 'DEFAULT': # If it's a transaction we care about
+                wallet.add_transaction(Transaction(transaction_dict).formatted())
+    
+    headers = ['Transaction hash', 'Date', 'From', 'To', 'Token', 'Amount']
+    print(tabulate(wallet.transactions, headers, tablefmt="grid"))
 
 def list_transaction_events(txhash):
     tx_receipt = get_transaction_receipt(txhash)
@@ -146,7 +109,3 @@ def wei_to_eth(wei): # Converts values in wei to eth equivalent
     return str(int(wei) / (10**18))
 
 list_token_txns('0x1beb5cc62a71683bE44681814a8a6fedC9e484B8', query_limit=4, ascending=True)
-#list_token_txns('0x0da634aaae01eb2cc3a90dac6734c45bb9180e9e', 'SYN', query_limit=4, ascending=True)
-#list_token_txns('0xf76219cecc4329707d2188934f3fec3edb306e2c', 'SYN', query_limit=3)
-#list_transaction_events("0x1c5df1fd206c6d2d17ee353babf3bdd8ad1c6473505fe893421074bb04a9391c")
-#TODO 0xfc87736145f79e4dc2c69bdcd335ae3fb471d5cec9c1fa312f2621ff76e17b30 - get exact amnt received from swap function with to argument as wallet_address
